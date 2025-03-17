@@ -5,8 +5,9 @@ import requests
 
 # 从环境变量中获取相关参数
 BAIDU_COOKIE = os.environ.get('BAIDU_COOKIE', '')
-TELEGRAM_BOT_TOKEN = os.environ.get('TG_BOT_TOKEN', '')
-TELEGRAM_CHAT_ID = os.environ.get('TG_USER_ID', '')
+# Server酱相关变量
+SERVER_PUSH_KEY = os.environ.get('SERVER_PUSH_KEY', '')  # 完整的SendKey
+SERVER_UID = os.environ.get('SERVER_UID', '')  # 用户UID
 
 HEADERS = {
     'Connection': 'keep-alive',
@@ -27,10 +28,12 @@ HEADERS = {
 
 final_messages = []
 
+
 def add_message(msg: str):
     """统一收集消息并打印"""
     print(msg)
     final_messages.append(msg)
+
 
 def signin():
     """执行每日签到"""
@@ -60,6 +63,7 @@ def signin():
     except Exception as e:
         add_message(f"签到请求异常: {e}")
 
+
 def get_daily_question():
     """获取日常问题"""
     if not BAIDU_COOKIE.strip():
@@ -82,6 +86,7 @@ def get_daily_question():
     except Exception as e:
         add_message(f"获取问题请求异常: {e}")
     return None, None
+
 
 def answer_question(answer, ask_id):
     """回答每日问题"""
@@ -113,6 +118,7 @@ def answer_question(answer, ask_id):
     except Exception as e:
         add_message(f"答题请求异常: {e}")
 
+
 def get_user_info():
     """获取用户信息"""
     if not BAIDU_COOKIE.strip():
@@ -137,22 +143,39 @@ def get_user_info():
     except Exception as e:
         add_message(f"用户信息请求异常: {e}")
 
-def send_telegram_once(message):
-    """推送单条消息到Telegram"""
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("未提供Telegram机器人TOKEN或CHAT_ID，无法发送通知")
+
+def send_server_chan(title, message):
+    """推送消息到Server酱3"""
+    if not SERVER_PUSH_KEY:
+        print("未提供Server酱PUSH_KEY，无法发送通知")
         return
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {'chat_id': TELEGRAM_CHAT_ID, 'text': message}
+    # 如果未提供UID，尝试从PUSH_KEY中提取
+    uid = SERVER_UID
+    if not uid and SERVER_PUSH_KEY.startswith('sctp'):
+        uid_match = re.search(r'^sctp(\d+)t', SERVER_PUSH_KEY)
+        if uid_match:
+            uid = uid_match.group(1)
+
+    # 如果仍未获得UID，则无法发送通知
+    if not uid:
+        print("未能获取Server酱UID，无法发送通知。请提供SERVER_UID或确保PUSH_KEY格式正确")
+        return
+
+    url = f"https://{uid}.push.ft07.com/send/{SERVER_PUSH_KEY}.send"
+    payload = {
+        'title': title,
+        'desp': message
+    }
     try:
-        resp = requests.post(url, json=payload, timeout=10)
+        resp = requests.post(url, data=payload, timeout=10)
         if resp.status_code == 200:
-            print("Telegram消息发送成功")
+            print("Server酱消息发送成功")
         else:
-            print("Telegram消息发送失败, 状态码:", resp.status_code)
+            print("Server酱消息发送失败, 状态码:", resp.status_code)
     except Exception as e:
-        print("发送Telegram消息时出现异常:", e)
+        print("发送Server酱消息时出现异常:", e)
+
 
 def main():
     """脚本主流程"""
@@ -166,10 +189,12 @@ def main():
     # 输出并推送汇总信息
     if final_messages:
         summary_msg = "\n".join(final_messages)
-        send_telegram_once(summary_msg)
+        send_server_chan("百度网盘成长值任务执行结果", summary_msg)
+
 
 if __name__ == "__main__":
     main()
+
 
 def handler(event, context):
     main()
