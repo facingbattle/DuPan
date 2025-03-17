@@ -162,7 +162,9 @@ def send_server_chan(title, message):
         print("未能获取Server酱UID，无法发送通知。请提供SERVER_UID或确保PUSH_KEY格式正确")
         return
 
-    url = f"https://{uid}.push.ft07.com/send/{SERVER_PUSH_KEY}.send"
+    # url = f"https://{uid}.push.ft07.com/send/{SERVER_PUSH_KEY}.send"
+    url = f"https://sctapi.ftqq.com/{SERVER_PUSH_KEY}.send"
+    # url = f"https://{uid}.push.ft07.com/send/{SERVER_PUSH_KEY}.send"
     payload = {
         'title': title,
         'desp': message
